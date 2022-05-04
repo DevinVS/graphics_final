@@ -42,6 +42,8 @@ let viewMatrix;
 let followEarth = false;
 let followMoon = false;
 
+let interval = 0.5;
+
 // Calcuate the position/rotation of each body based on time
 // Each tick is equal to 1 hour of time
 function updateWorld() {
@@ -61,7 +63,9 @@ function updateWorld() {
     moonY = earthY + moonEarthDist * Math.sin(moonAngle);
 
     if (followEarth) {
-        glMatrix.mat4.lookAt(viewMatrix, [earthX, earthY, 3], [earthX, earthY, 0], [0,1,0]);
+        let upX = Math.cos(earthRot);
+        let upY = Math.sin(earthRot);
+        glMatrix.mat4.lookAt(viewMatrix, [earthX, earthY, 3], [earthX, earthY, 0], [upX,upY,0]);
     } else if (followMoon) {
         glMatrix.mat4.lookAt(viewMatrix, [moonX, moonY, 4], [moonX, moonY, 0], [0,1,0]);
     } else {
@@ -180,13 +184,13 @@ function drawShapes() {
     drawSun([1.0, 1.0, 0.0]);
 
     // Draw Earth
-    drawSphere(earthX, earthY, earthSize, earthTex);
+    drawSphere(earthX, earthY, earthSize, earthRot, earthTex);
 
     // Draw Moon
-    drawSphere(moonX, moonY, moonSize, moonTex);
+    drawSphere(moonX, moonY, moonSize, 0, moonTex);
 }
 
-function drawSphere(x, y, radius, texture) {
+function drawSphere(x, y, radius, rot, texture) {
     gl.useProgram(astroProgram);
 
     gl.uniformMatrix4fv(astroProgram.view, false, viewMatrix);
@@ -197,6 +201,7 @@ function drawSphere(x, y, radius, texture) {
 
     let matrix = glMatrix.mat4.create();
     glMatrix.mat4.translate(matrix, matrix, glMatrix.vec3.fromValues(x, y, 0));
+    glMatrix.mat4.rotate(matrix, matrix, rot, glMatrix.vec3.fromValues(0, 0, 1));
     glMatrix.mat4.scale(matrix, matrix, glMatrix.vec3.fromValues(radius, radius, radius))
     gl.uniformMatrix4fv(astroProgram.model, false, matrix);
 
@@ -438,7 +443,7 @@ function initProgram(vertex_id, fragment_id) {
     draw();
     
       setInterval(() => {
-          time += 1;
+          time += interval;
           updateWorld();
           draw();
       }, 1);

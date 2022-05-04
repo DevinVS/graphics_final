@@ -6,14 +6,24 @@
 
       if (key =="p"){
           followEarth = true;
-      } else {
+          followMoon = false;
+      }
+
+      if (key == "c"){
           followEarth = false;
+          followMoon = false;
       }
 
       if (key == "m") {
           followMoon = true;
-      } else {
-          followMoon = false;
+          followEarth = false;
+      }
+
+      if (key == "-"){
+          interval /= 2;
+      }
+
+      if (key == "+"){
+          interval *= 2;
       }
   }
-  
