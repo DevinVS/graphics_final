@@ -1,0 +1,211 @@
+<html>
+<head>
+    <title>CSCI-510: Assn 5 - Transformation</title>
+
+    <!-- include vertex shaders -->
+
+    <script id="wireframe-V" type="x-shader/x-vertex">
+        #version 300 es
+        precision mediump float;
+
+        in vec3 vertexPosition;
+        in vec3 normal;
+        in vec2 uv;
+
+        // Position and View
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 proj;
+
+        // Light Parameters
+        uniform vec3 ambientLight;
+        uniform vec3 lightPosition;     // World Coords
+        uniform vec3 lightColor;
+
+        // Color Params
+        uniform vec3 color;
+        uniform vec3 highlightColor;
+
+        // Phong parameters
+        uniform float ka;
+        uniform float kd;
+        uniform float ks;
+        uniform float ke;
+
+        // Outputs
+        out vec2 theUv;
+        out vec3 N;
+        out vec3 L;
+        out vec3 V;
+
+        void main()
+        {
+            mat4 modelView = view * model;
+            mat4 normalMatrix = transpose(inverse(modelView));
+
+            vec3 vcam = (modelView * vec4(vertexPosition, 1.0)).xyz;
+            vec3 lcam = (view * vec4(lightPosition, 1.0)).xyz;
+            vec3 ncam = (normalMatrix * vec4(normal, 1.0)).xyz;
+            ncam = faceforward(ncam, vcam, ncam);
+
+            N = normalize (ncam);
+            L = normalize(lcam - vcam);
+            V = -normalize(vcam);
+
+            gl_Position = proj*view*model*vec4(vertexPosition, 1.0);
+            theUv = uv;
+        }
+    </script>
+
+     <!-- wireframe fragment Shaders -->
+     <script id="wireframe-F" type="x-shader/x-fragment">
+         #version 300 es
+         precision mediump float;
+
+         in vec3 N;
+         in vec3 L;
+         in vec3 V;
+         in vec2 theUv;
+
+         // Light Params
+         uniform vec3 ambientLight;
+         uniform vec3 lightColor;
+
+         // Object color
+         uniform vec3 highlightColor;
+
+         // Phong params
+         uniform float ka;
+         uniform float kd;
+         uniform float ks;
+         uniform float ke;
+
+         // Color that is the result of this shader
+         out vec4 fragColor;
+
+         // Our Texture
+         uniform sampler2D uSampler;
+
+         void main(void) {
+            vec3 color = texture(uSampler, theUv).xyz;
+            vec3 R = normalize (reflect (-L, N));
+
+            vec3 ambient = ka * ambientLight * color;
+            vec3 diffuse = kd * lightColor * color;
+            vec3 spec = ks * highlightColor * lightColor * pow (max(dot(R,V), 0.0), ke);
+
+            fragColor = vec4(ambient+diffuse+spec, 1.0);
+            //fragColor = vec4(color, 1.0);
+         }
+
+     </script>
+
+     <!-- Sun vertex shader -->
+     <script id="sun-V" type="x-shader/x-vertex">
+         #version 300 es
+         precision mediump float;
+
+         in vec3 vertexPosition;
+         in vec3 normal;
+         in vec2 uv;
+
+         // Position and View
+         uniform mat4 model;
+         uniform mat4 view;
+         uniform mat4 proj;
+
+         void main(void) {
+            gl_Position = proj*view*model*vec4(vertexPosition, 1.0);
+         }
+    </script>
+
+    <!-- Sun texture fragment shader -->
+    <script id="sun-F" type="x-shader/x-fragment">
+        #version 300 es
+        precision mediump float;
+
+        out vec4 fragColor;
+
+        uniform float time;
+
+        float rand(vec3 n) {
+            return fract(sin(dot(n.xyz ,vec3(12.9898,78.233,144.7272))) * 43758.5453);
+        }
+
+        float noise(vec2 n) {
+            float t = round(time / 20.0);
+            const vec2 d = vec2(0.0, 1.0);
+          vec2 b = floor(n), f = smoothstep(vec2(0.0), vec2(1.0), fract(n));
+            return mix(mix(rand(vec3(b, t)), rand(vec3(b + d.yx, t)), f.x), mix(rand(vec3(b + d.xy, t)),
+            rand(vec3(b + d.yy, time)), f.x), f.y);
+        }
+
+        void main(void) {
+            vec3 start = vec3(1.0, 1.0, 0.0);
+            vec3 end = vec3(1.0, 0.7, 0.0);
+
+            vec3 color = mix(start, end, noise(gl_FragCoord.xy));
+
+            fragColor = vec4(color, 1.0);
+        }
+    </script>
+
+
+     <!-- Matrix library and code for standard transformations -->
+     <script type="text/javascript" src="gl-matrix-min.js"></script>
+    
+    <!-- include the main final functions -->
+    <script type="text/javascript" src="./finalMain.js"></script>
+    
+    <!-- shape functions -->
+    <script type="text/javascript" src="./cgIShape.js"></script>
+    <script type="text/javascript" src="./myShapes-min.js"></script>
+    
+    <!-- keyboard functions -->
+    <script type="text/javascript" src="./event.js"></script>
+    
+    <!-- texture images -->
+     <img id="earth-texture" src="earth.png" style="display: none;"> </img>
+     <img id="moon-texture" src="moon.png" style="display: none;"> </img>
+
+  <script type="text/javascript">
+    // Call init once the webpage has loaded
+    window.onload = init;
+  </script>
+</head>
+
+<body>
+  <h1>CSCI-510: Final Exam Image</h1>
+  <table>
+      <tr>
+          <td><canvas id="webgl-canvas" width="500" height="500">
+            Your browser does not support the HTML5 canvas element.
+          </canvas></td>
+          <td>
+              <h3>Controls</h3>
+              <table border="1">
+              <tbody>
+              <tr>
+                  <td>p</td>
+                  <td>Ptolemy branded Geocentrism</td>
+              </tr>
+              <tr>
+                  <td>c</td>
+                  <td>Copernicus's homemade heliocentrism</td>
+              </tr>
+              <tr>
+                  <td>m</td>
+                  <td>Chad lunarcentrism</td>
+                  </tr>
+              </tbody>
+              </tbody>
+              </table>
+          </td>
+      </tr>
+  </table>
+  
+  
+
+</body>
+</html>
+
